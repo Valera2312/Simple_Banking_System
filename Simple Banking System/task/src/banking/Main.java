@@ -47,7 +47,6 @@ public class Main {
                 }else {
                     System.out.println("Wrong card number or PIN!");
                 }
-
             }
             if(choice == 0){
                 System.out.println("Bye!");
