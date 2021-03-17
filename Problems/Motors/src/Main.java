@@ -59,19 +59,19 @@ class MotorFactory {
      * 'P' or 'p' - pneumatic, 'H' or 'h' - hydraulic, 'E' or 'e' - electric, 'W' or 'w' - warp.
      */
     public static Motor make(char type, String model, long power) {
-        if(type == 'E'|| type == 'e'){
+        if (type == 'E'|| type == 'e') {
 
             return new ElectricMotor(model, power);
 
-        }else if(type == 'p'|| type == 'P'){
+        } else if (type == 'p'|| type == 'P') {
 
             return new PneumaticMotor(model, power);
 
-        }else if(type == 'w'|| type == 'W'){
+        } else if (type == 'w'|| type == 'W') {
 
             return new WarpDrive(model, power);
         }
-        else if(type == 'h'|| type == 'H'){
+        else if (type == 'h'|| type == 'H') {
 
             return new HydraulicMotor(model, power);
         }
@@ -88,7 +88,7 @@ public class Main {
         final String model = scanner.next();
         final long power = scanner.nextLong();
 
-        Motor motor = MotorFactory.make(type,model,power);
+        Motor motor = MotorFactory.make(type, model, power);
         scanner.close();
         System.out.print(motor);
     }
