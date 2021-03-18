@@ -3,8 +3,8 @@ import java.util.*;
 public class Main {
 
     // write a method here
-    public static void addValueByIndex(long[] array,int index, long value){
-        array[index]+= value;
+    public static void addValueByIndex(long[] array, int index, long value) {
+        array[index] += value;
     }
 
 

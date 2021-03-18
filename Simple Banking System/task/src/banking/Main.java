@@ -10,12 +10,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         Scanner scanner = new Scanner(System.in);
         c c = new c();
         CoolJDBC connect = new CoolJDBC();
         connect.connect(args[1]);
-        Query query = new Query();
+        //Query query = new Query();
 
         String balance = "0";
         while(true) {
@@ -33,7 +33,7 @@ public class Main {
                 System.out.println(c.card);
                 System.out.println("Your card PIN:");
                 System.out.println(c.PIN);
-                query.addCard(connect.conn, c.PIN,c.card);
+                Query.addCard(connect.conn, c.PIN,c.card);
 
             }
             if (choice == 2) {
@@ -42,30 +42,75 @@ public class Main {
                 System.out.println("Enter your PIN:");
                 int PIN = scanner.nextInt();
 
-                if(String.valueOf(card).equals(c.card) && String.valueOf(PIN).equals(c.PIN)){
-                    System.out.println("You have successfully logged in!");
+                    try {
+                        if (String.valueOf(PIN).equals(Query.PIN(connect.conn, String.valueOf(card)))) {
+                            System.out.println("You have successfully logged in!");
+                            while (true) {
+                                System.out.println("1. Balance");
+                                System.out.println("2. Add income");
+                                System.out.println("3. Do transfer");
+                                System.out.println("4. Close account");
+                                System.out.println("5. Log out");
+                                System.out.println("0. Exit");
+                                int ch = scanner.nextInt();
+                                if (ch == 1) {
+                                    System.out.println("Your balance: " + Query.Balance(connect.conn, String.valueOf(card)));
+                                } else if (ch == 2) {
+                                    System.out.println("Enter income:");
+                                    int income = scanner.nextInt();
+                                    Query.AddIncome(connect.conn, String.valueOf(card),income);
+                                        System.out.println("Income was added!");
+                                } else if (ch == 3) {
 
-                    while(true){
-                        System.out.println("1. Balance");
-                        System.out.println("2. Log out");
-                        System.out.println("0. Exit");
-                        int ch = scanner.nextInt();
-                        if(ch == 1){
-                            System.out.println("Balance: 0");
-                        } else if(ch == 2){
-                            System.out.println("You have successfully logged out!");
-                            break;
-                        }
-                        else if(ch == 0){
-                            return;
+                                    System.out.println("Transfer");
+                                    System.out.println("Enter card number:");
+                                    Long Another_Card = scanner.nextLong();
+                                    long Another_Card_BIN =  Another_Card / 10;
+                                    int Check_Sum = (int) (Another_Card % 10);
+                                    if(Lunh.lunh(String.valueOf(Another_Card_BIN)).equals(String.valueOf(Check_Sum))) {
+
+                                        if (Query.AnotherCard(connect.conn, String.valueOf(Another_Card))) {
+                                            System.out.println("Enter how much money you want to transfer:");
+                                            int amount = scanner.nextInt();
+
+                                            if (Query.Balance(connect.conn, String.valueOf(card)) > amount) {
+                                                Query.transfer(connect.conn,String.valueOf(card),
+                                                        amount,String.valueOf(Another_Card));
+                                                System.out.println("Success!");
+                                            } else {
+                                                System.out.println("Not enough money!");
+                                            }
+                                        } else {
+                                            System.out.println("Such a card does not exist.");
+                                        }
+                                    }
+                                    else{
+                                        System.out.println("Probably you made a mistake in the card number.");
+                                        System.out.println("Please try again!");
+                                    }
+
+                                } else if (ch == 4) {
+                                    Query.closeAccount(connect.conn, String.valueOf(card));
+                                    System.out.println("The account has been closed!");
+                                    break;
+                                } else if (ch == 5) {
+                                    System.out.println("You have successfully logged out!");
+                                    break;
+                                } else if (ch == 0) {
+                                    return;
+                                }
+                            }
+                        } else {
+                            System.out.println("Wrong card number or PIN!");
                         }
                     }
-                }else {
-                    System.out.println("Wrong card number or PIN!");
-                }
+                    catch (Exception e){
+                        System.out.println("Wrong card number or PIN!");
+                    }
             }
             if(choice == 0){
                 System.out.println("Bye!");
+                connect.conn.close();
                 return;
             }
 
@@ -134,7 +179,7 @@ class CoolJDBC {
     protected Connection conn = null;
 
     public Connection connect(String db) {
-        String url = "jdbc:sqlite:"+ db;
+        String url = "jdbc:sqlite:" + db;
         SQLiteDataSource dataSource = new SQLiteDataSource();
         dataSource.setUrl(url);
 
@@ -165,9 +210,9 @@ class CoolJDBC {
     }
 }
 
-class Query {
+class  Query {
 
-    public void addCard(Connection conn, String PIN, String number) {
+    public static void addCard(Connection conn, String PIN, String number) {
         // Создадим подготовленное выражение, чтобы избежать SQL-инъекций
         try (PreparedStatement statement = conn.prepareStatement(
                 "INSERT INTO card( number,`pin`) " +
@@ -184,7 +229,99 @@ class Query {
         }
     }
 
+
+    public static int  Balance(Connection conn,String card) throws SQLException {
+
+        Statement statement = conn.createStatement();
+
+        try (ResultSet balance = statement.executeQuery("SELECT balance FROM card WHERE number = " + card)) {
+
+            // Retrieve column values
+            return balance.getInt("balance");
+
+        }
+
+    }
+    public static String PIN(Connection conn, String card) throws SQLException {
+
+        Statement statement = conn.createStatement();
+
+        try (ResultSet PIN = statement.executeQuery("SELECT pin FROM card WHERE number = " + card)) {
+
+            // Retrieve column values
+            return PIN.getString("pin");
+        }
+
+    }
+    public static boolean  AnotherCard(Connection conn,String AnotherCard) throws SQLException {
+
+        Statement statement = conn.createStatement();
+
+        try (ResultSet Card = statement.executeQuery("SELECT number FROM card WHERE number = " + AnotherCard)) {
+
+            // Retrieve column values
+             String number = Card.getString("number");
+            return !number.equals("");
+
+        }catch (Exception e){
+            return false;
+        }
+    }
+
+    public static void AddIncome (Connection conn, String Card, int income) throws SQLException {
+
+
+
+         String SQL = "UPDATE card SET balance = "
+                +"balance + ?"
+                +"WHERE number = ?";
+
+        PreparedStatement statement = conn.prepareStatement(SQL);
+        statement.setInt(1, income);
+        statement.setString(2, Card);
+        statement.executeUpdate();
+    }
+    public static void transfer (Connection conn, String Card, int income, String AnotherCard) throws SQLException {
+try {
+    String SQL = "UPDATE card SET balance = "
+            +"balance + ?"
+            +"WHERE number = ?";
+
+    PreparedStatement statement = conn.prepareStatement(SQL);
+    statement.setInt(1, income);
+    statement.setString(2, AnotherCard);
+
+
+    String SQL2 = "UPDATE card SET balance = "
+            +"balance - ?"
+            +"WHERE number = ?";
+
+    PreparedStatement statement2 = conn.prepareStatement(SQL2);
+    statement2.setInt(1, income);
+    statement2.setString(2, Card);
+
+    statement.executeUpdate();
+    statement2.executeUpdate();
+}catch (Exception e){
+    System.out.println("Что то не то");
+
 }
+
+
+    }
+    public static void closeAccount(Connection conn,String card) throws SQLException {
+        String SQL = "DELETE FROM card WHERE number = ?";
+
+        PreparedStatement pstmt = conn.prepareStatement(SQL);
+
+            // set the corresponding param
+            pstmt.setString(1, card);
+            // execute the delete statement
+            pstmt.executeUpdate();
+
+        }
+    }
+
 
 
 
