@@ -14,7 +14,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         c c = new c();
         CoolJDBC connect = new CoolJDBC();
-        connect.connect(args[1]);
+        connect.connect("card.s3db");
         //Query query = new Query();
 
         String balance = "0";
@@ -41,11 +41,13 @@ public class Main {
                 long card = scanner.nextLong();
                 System.out.println("Enter your PIN:");
                 int PIN = scanner.nextInt();
-
+                boolean stop = false;
                     try {
                         if (String.valueOf(PIN).equals(Query.PIN(connect.conn, String.valueOf(card)))) {
                             System.out.println("You have successfully logged in!");
-                            while (true) {
+
+                            while (!stop) {
+
                                 System.out.println("1. Balance");
                                 System.out.println("2. Add income");
                                 System.out.println("3. Do transfer");
@@ -53,51 +55,56 @@ public class Main {
                                 System.out.println("5. Log out");
                                 System.out.println("0. Exit");
                                 int ch = scanner.nextInt();
-                                if (ch == 1) {
-                                    System.out.println("Your balance: " + Query.Balance(connect.conn, String.valueOf(card)));
-                                } else if (ch == 2) {
-                                    System.out.println("Enter income:");
-                                    int income = scanner.nextInt();
-                                    Query.AddIncome(connect.conn, String.valueOf(card),income);
+                                switch (ch){
+                                    case 1:
+                                        System.out.println("Your balance: " + Query.Balance(connect.conn, String.valueOf(card)));
+                                        break;
+                                    case 2:
+                                        System.out.println("Enter income:");
+                                        int income = scanner.nextInt();
+                                        Query.AddIncome(connect.conn, String.valueOf(card),income);
                                         System.out.println("Income was added!");
-                                } else if (ch == 3) {
+                                        break;
+                                    case 3:
+                                        System.out.println("Transfer");
+                                        System.out.println("Enter card number:");
+                                        Long Another_Card = scanner.nextLong();
+                                        long Another_Card_BIN =  Another_Card / 10;
+                                        int Check_Sum = (int) (Another_Card % 10);
+                                        if(Lunh.lunh(String.valueOf(Another_Card_BIN)).equals(String.valueOf(Check_Sum))) {
 
-                                    System.out.println("Transfer");
-                                    System.out.println("Enter card number:");
-                                    Long Another_Card = scanner.nextLong();
-                                    long Another_Card_BIN =  Another_Card / 10;
-                                    int Check_Sum = (int) (Another_Card % 10);
-                                    if(Lunh.lunh(String.valueOf(Another_Card_BIN)).equals(String.valueOf(Check_Sum))) {
+                                            if (Query.AnotherCard(connect.conn, String.valueOf(Another_Card))) {
+                                                System.out.println("Enter how much money you want to transfer:");
+                                                int amount = scanner.nextInt();
 
-                                        if (Query.AnotherCard(connect.conn, String.valueOf(Another_Card))) {
-                                            System.out.println("Enter how much money you want to transfer:");
-                                            int amount = scanner.nextInt();
-
-                                            if (Query.Balance(connect.conn, String.valueOf(card)) > amount) {
-                                                Query.transfer(connect.conn,String.valueOf(card),
-                                                        amount,String.valueOf(Another_Card));
-                                                System.out.println("Success!");
+                                                if (Query.Balance(connect.conn, String.valueOf(card)) > amount) {
+                                                    Query.transfer(connect.conn,String.valueOf(card),
+                                                            amount,String.valueOf(Another_Card));
+                                                    System.out.println("Success!");
+                                                } else {
+                                                    System.out.println("Not enough money!");
+                                                }
                                             } else {
-                                                System.out.println("Not enough money!");
+                                                System.out.println("Such a card does not exist.");
                                             }
-                                        } else {
-                                            System.out.println("Such a card does not exist.");
                                         }
-                                    }
-                                    else{
-                                        System.out.println("Probably you made a mistake in the card number.");
-                                        System.out.println("Please try again!");
-                                    }
+                                        else{
+                                            System.out.println("Probably you made a mistake in the card number.");
+                                            System.out.println("Please try again!");
+                                            break;
+                                        }
+                                    case 4:
+                                        Query.closeAccount(connect.conn, String.valueOf(card));
+                                        System.out.println("The account has been closed!");
+                                        stop = true;
+                                        break;
 
-                                } else if (ch == 4) {
-                                    Query.closeAccount(connect.conn, String.valueOf(card));
-                                    System.out.println("The account has been closed!");
-                                    break;
-                                } else if (ch == 5) {
-                                    System.out.println("You have successfully logged out!");
-                                    break;
-                                } else if (ch == 0) {
-                                    return;
+                                    case 5:
+                                        System.out.println("You have successfully logged out!");
+                                        stop = true;
+                                        break;
+                                    case 0:
+                                        return;
                                 }
                             }
                         } else {
@@ -179,7 +186,7 @@ class CoolJDBC {
     protected Connection conn = null;
 
     public Connection connect(String db) {
-        String url = "jdbc:sqlite:" + db;
+        String url = "jdbc:sqlite:C:\\sqlite\\" + db;
         SQLiteDataSource dataSource = new SQLiteDataSource();
         dataSource.setUrl(url);
 
@@ -269,8 +276,6 @@ class  Query {
     }
 
     public static void AddIncome (Connection conn, String Card, int income) throws SQLException {
-
-
 
          String SQL = "UPDATE card SET balance = "
                 +"balance + ?"
